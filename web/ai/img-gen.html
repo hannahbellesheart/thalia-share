@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Image Studio - Prompt Library</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 10px;
+    }
+
+    .line-clamp-3 {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-8">
+
+  <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+    <!-- Sidebar Settings -->
+    <aside
+      class="lg:col-span-4 space-y-6 bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl h-fit sticky top-8">
+      <div class="flex items-center gap-2 mb-4">
+        <i data-lucide="settings" class="text-blue-400"></i>
+        <h2 class="text-xl font-bold">Studio Settings</h2>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs uppercase text-slate-400 font-bold mb-1 block">Base Model</label>
+          <select id="modelSelect"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+            <option value="flux">FLUX</option>
+            <option value="turbo">TURBO</option>
+            <option value="unity">UNITY</option>
+            <option value="deliberate">DELIBERATE</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs uppercase text-slate-400 font-bold mb-1 block">Width</label>
+            <input type="number" id="widthInput" value="1024"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2">
+          </div>
+          <div>
+            <label class="text-xs uppercase text-slate-400 font-bold mb-1 block">Height</label>
+            <input type="number" id="heightInput" value="1024"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs uppercase text-slate-400 font-bold mb-1 block flex items-center justify-between">
+            <span>Negative Prompt</span>
+            <div class="flex gap-1">
+              <button id="addCurrentNegative" class="p-1 hover:bg-slate-800 rounded transition-colors"
+                title="Save Current Negative Prompt">
+                <i data-lucide="plus" size="14" class="text-green-400"></i>
+              </button>
+              <button id="openNegativeLibrary" class="p-1 hover:bg-slate-800 rounded transition-colors"
+                title="Saved Negative Prompts">
+                <i data-lucide="book-marked" size="14" class="text-blue-400"></i>
+              </button>
+            </div>
+          </label>
+          <textarea id="negativePrompt" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 h-20 text-sm"
+            placeholder="What to exclude..."></textarea>
+          <button id="toggleNegPreview" class="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1 mt-2">
+            <i data-lucide="eye" size="12"></i> <span>Show Active Filters</span>
+          </button>
+          <div id="negPreviewContent"
+            class="hidden mt-2 p-3 bg-slate-950 rounded-lg border border-slate-700 text-xs space-y-2">
+            <div>
+              <strong class="text-slate-300">Universal:</strong>
+              <p class="mt-1 text-slate-400" id="universalNegDisplay"></p>
+            </div>
+            <div id="styleNegContainer" class="hidden">
+              <strong class="text-slate-300">Style-Specific:</strong>
+              <p class="mt-1 text-slate-400" id="styleNegDisplay"></p>
+            </div>
+            <div id="customNegContainer" class="hidden">
+              <strong class="text-slate-300">Your Additions:</strong>
+              <p class="mt-1 text-slate-400" id="customNegDisplay"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs uppercase text-slate-400 font-bold mb-1 block">Seed (-1 = Random)</label>
+            <input type="text" id="seedInput" value="-1"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2">
+          </div>
+          <div>
+            <label class="text-xs uppercase text-slate-400 font-bold mb-1 block">Batch Count</label>
+            <input type="number" id="countInput" min="1" max="4" value="1"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs uppercase text-slate-400 font-bold mb-1 block">Publishable API Key (optional)</label>
+          <input type="text" id="apiKeyInput" placeholder="pk_... (for higher limits)"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm">
+        </div>
+
+        <div class="space-y-3">
+          <label class="flex items-center gap-3 cursor-pointer group">
+            <input type="checkbox" id="safeToggle" class="hidden peer" checked>
+            <div class="w-10 h-5 bg-slate-700 peer-checked:bg-blue-600 rounded-full relative transition-colors">
+              <div class="absolute top-1 left-1 peer-checked:left-6 w-3 h-3 bg-white rounded-full transition-all"
+                id="safeIndicator"></div>
+            </div>
+            <span class="text-sm flex items-center gap-2"><i data-lucide="shield-check" size="16"></i> Safety
+              Filter</span>
+          </label>
+
+          <label class="flex items-center gap-3 cursor-pointer group">
+            <input type="checkbox" id="nologoToggle" class="hidden peer" checked>
+            <div class="w-10 h-5 bg-slate-700 peer-checked:bg-blue-600 rounded-full relative transition-colors">
+              <div class="absolute top-1 left-1 peer-checked:left-6 w-3 h-3 bg-white rounded-full transition-all"
+                id="nologoIndicator"></div>
+            </div>
+            <span class="text-sm flex items-center gap-2"><i data-lucide="eye-off" size="16"></i> Remove
+              Watermark</span>
+          </label>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Interface -->
+    <main class="lg:col-span-8 space-y-6">
+      <section class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <div class="space-y-4">
+          <div class="flex gap-2 items-center text-blue-400 mb-2">
+            <i data-lucide="sparkles"></i>
+            <h1 class="text-2xl font-black tracking-tight uppercase">Pollinations Generator</h1>
+          </div>
+
+          <div class="relative">
+            <label class="text-xs uppercase text-slate-400 font-bold mb-2 block flex items-center justify-between">
+              <span>Main Prompt</span>
+              <div class="flex gap-1">
+                <button id="addCurrentPrompt" class="p-1 hover:bg-slate-800 rounded transition-colors"
+                  title="Save Current Prompt">
+                  <i data-lucide="plus" size="14" class="text-green-400"></i>
+                </button>
+                <button id="openPromptLibrary" class="p-1 hover:bg-slate-800 rounded transition-colors"
+                  title="Saved Prompts">
+                  <i data-lucide="library" size="14" class="text-blue-400"></i>
+                </button>
+              </div>
+            </label>
+            <textarea id="mainPrompt"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none h-32"
+              placeholder="Describe what you want to see..."></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs uppercase text-slate-400 font-bold mb-2 block flex items-center justify-between">
+                <span class="flex items-center gap-1">
+                  <i data-lucide="layers" size="14"></i> Style Preset
+                </span>
+                <button id="addStylePreset" class="p-1 hover:bg-slate-800 rounded transition-colors"
+                  title="Create New Style Preset">
+                  <i data-lucide="plus-circle" size="14" class="text-green-400"></i>
+                </button>
+              </label>
+              <div id="styleContainer" class="flex flex-wrap gap-2">
+                <!-- Styles generated by JS -->
+              </div>
+            </div>
+            <div>
+              <label class="text-xs uppercase text-slate-400 font-bold mb-1 block flex items-center gap-1">
+                <i data-lucide="image" size="14"></i> Image-to-Image (URL)
+              </label>
+              <input type="text" id="imgToImgUrl" placeholder="Paste reference image URL..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm">
+            </div>
+          </div>
+
+          <button id="generateBtn"
+            class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95">
+            <i data-lucide="sparkles" id="btnIcon"></i>
+            <span id="btnText">Generate Masterpiece</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Results Gallery -->
+      <section class="space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-xl font-bold flex items-center gap-2">
+            Gallery <span id="galleryCount" class="bg-slate-800 px-2 py-0.5 rounded text-sm text-slate-400">0</span>
+          </h3>
+          <button id="clearGallery" class="text-red-400 hover:text-red-300 text-sm flex items-center gap-1">
+            <i data-lucide="trash-2" size="16"></i> Clear All
+          </button>
+        </div>
+
+        <div id="imageGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div id="emptyState"
+            class="col-span-full border-2 border-dashed border-slate-800 rounded-2xl p-12 flex flex-col items-center text-slate-500">
+            <i data-lucide="image" size="48" class="mb-4 opacity-20"></i>
+            <p>Your creations will appear here</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Prompt Library Modal -->
+  <div id="promptLibraryModal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div
+      class="bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <i data-lucide="library" class="text-blue-400"></i>
+          <h2 class="text-2xl font-bold">Prompt Library</h2>
+        </div>
+        <button id="closePromptModal" class="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          aria-label="Close prompt library">
+          <i data-lucide="x" size="24"></i>
+        </button>
+      </div>
+
+      <div class="p-6 border-b border-slate-800 space-y-4">
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <input type="text" id="promptSearch" placeholder="Search prompts..."
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm">
+          </div>
+          <select id="promptCategoryFilter"
+            class="bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm min-w-[150px]">
+            <option value="all">All Categories</option>
+            <option value="fantasy">Fantasy</option>
+            <option value="nature">Nature</option>
+            <option value="character">Character</option>
+            <option value="architecture">Architecture</option>
+            <option value="abstract">Abstract</option>
+            <option value="urban">Urban</option>
+            <option value="still-life">Still Life</option>
+            <option value="animals">Animals</option>
+            <option value="events">Events</option>
+            <option value="technical">Technical</option>
+          </select>
+          <select id="promptModelFilter"
+            class="bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm min-w-[120px]">
+            <option value="all">All Models</option>
+            <option value="flux">FLUX</option>
+            <option value="turbo">TURBO</option>
+            <option value="unity">UNITY</option>
+            <option value="deliberate">DELIBERATE</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2" id="promptTypeToggle">
+          <button data-type="prompts"
+            class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium text-sm flex items-center gap-1">
+            <i data-lucide="sparkles" size="16"></i> Prompts
+          </button>
+          <button data-type="negative"
+            class="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 font-medium text-sm hover:bg-slate-700 flex items-center gap-1">
+            <i data-lucide="shield-off" size="16"></i> Negative Prompts
+          </button>
+        </div>
+      </div>
+
+      <div id="promptGrid" class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Style Preset Manager Modal -->
+  <div id="stylePresetModal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl w-full max-w-2xl">
+      <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <i data-lucide="palette" class="text-blue-400"></i>
+          <h2 class="text-2xl font-bold" id="styleModalTitle">Add Style Preset</h2>
+        </div>
+        <button id="closeStyleModal" class="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          aria-label="Close style preset modal">
+          <i data-lucide="x" size="24"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="text-xs uppercase text-slate-400 font-bold mb-2 block">Preset Name</label>
+          <input type="text" id="stylePresetName" placeholder="e.g., Horror Coloring Book"
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3">
+        </div>
+
+        <div>
+          <label class="text-xs uppercase text-slate-400 font-bold mb-2 block flex items-center gap-2">
+            Icon
+            <span class="text-slate-500 font-normal normal-case text-xs">(Lucide icon name)</span>
+          </label>
+          <input type="text" id="stylePresetIcon" placeholder="e.g., skull, wand-2, palette"
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3">
+        </div>
+
+        <div>
+          <label class="text-xs uppercase text-slate-400 font-bold mb-2 block">Positive Prompt Modifiers</label>
+          <textarea id="stylePresetPrompt" placeholder="Descriptive terms that enhance this style..."
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 h-24 text-sm"></textarea>
+          <p class="text-xs text-slate-500 mt-1">Example: "spooky atmosphere, Halloween theme, jack-o-lanterns, ghosts"
+          </p>
+        </div>
+
+        <div>
+          <label class="text-xs uppercase text-slate-400 font-bold mb-2 block">Negative Prompt Modifiers</label>
+          <textarea id="stylePresetNegative" placeholder="What to avoid in this style..."
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 h-24 text-sm"></textarea>
+          <p class="text-xs text-slate-500 mt-1">Example: "cute, friendly, bright colors, cheerful"</p>
+        </div>
+
+        <div class="flex gap-3 pt-4">
+          <button id="saveStylePreset"
+            class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold flex items-center justify-center gap-2">
+            <i data-lucide="save" size="20"></i>
+            Save Preset
+          </button>
+          <button id="cancelStylePreset" class="px-6 bg-slate-800 hover:bg-slate-700 py-3 rounded-lg font-medium">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Comprehensive Prompt Library
+    const PROMPT_LIBRARY = {
+      universalNegative: "blurry, low quality, distorted, deformed, ugly, bad anatomy, low resolution, pixelated, artifacts, watermark, text, signature, username, duplicate, cropped, out of frame",
+
+      prompts: [
+        // FLUX Model Optimized
+        { id: 1, text: "a majestic dragon soaring through storm clouds, lightning crackling", category: "fantasy", model: "flux", tags: ["dragon", "weather", "epic"] },
+        { id: 2, text: "hyper-detailed mechanical watch gears in motion, macro photography", category: "technical", model: "flux", tags: ["mechanical", "macro", "steampunk"] },
+        { id: 3, text: "serene Japanese zen garden with cherry blossoms and koi pond", category: "nature", model: "flux", tags: ["peaceful", "asian", "garden"] },
+        { id: 4, text: "cyberpunk street vendor at night market, neon reflections on wet pavement", category: "urban", model: "flux", tags: ["cyberpunk", "night", "urban"] },
+        { id: 5, text: "ancient library filled with floating magical books and glowing runes", category: "fantasy", model: "flux", tags: ["magic", "library", "mystical"] },
+        { id: 6, text: "ethereal elf warrior with glowing eyes and enchanted armor", category: "character", model: "flux", tags: ["elf", "warrior", "fantasy"] },
+        { id: 7, text: "wise old wizard with long white beard and ornate staff", category: "character", model: "flux", tags: ["wizard", "elderly", "magic"] },
+        { id: 8, text: "cybernetic samurai with glowing katana in neon city", category: "character", model: "flux", tags: ["samurai", "cyberpunk", "warrior"] },
+        { id: 9, text: "steampunk inventor in cluttered workshop with brass contraptions", category: "character", model: "flux", tags: ["steampunk", "inventor", "workshop"] },
+        { id: 10, text: "futuristic glass dome city on Mars with red landscape", category: "architecture", model: "flux", tags: ["scifi", "mars", "futuristic"] },
+        { id: 11, text: "medieval castle on misty mountain peak at sunrise", category: "architecture", model: "flux", tags: ["castle", "medieval", "mountain"] },
+        { id: 12, text: "underwater coral reef city with bio-luminescent buildings", category: "architecture", model: "flux", tags: ["underwater", "scifi", "nature"] },
+        { id: 13, text: "abandoned overgrown amusement park at golden hour dusk", category: "architecture", model: "flux", tags: ["abandoned", "eerie", "nature"] },
+        { id: 14, text: "swirling galaxy of colorful paint in cosmic void", category: "abstract", model: "flux", tags: ["space", "colorful", "abstract"] },
+        { id: 15, text: "geometric crystal formations reflecting rainbow prism light", category: "abstract", model: "turbo", tags: ["geometric", "crystal", "colorful"] },
+
+        // TURBO Model Optimized
+        { id: 16, text: "cute fluffy cat wearing a tiny wizard hat", category: "animals", model: "turbo", tags: ["cat", "cute", "fantasy"] },
+        { id: 17, text: "sunset over ocean waves crashing on beach", category: "nature", model: "turbo", tags: ["sunset", "ocean", "peaceful"] },
+        { id: 18, text: "steaming cup of coffee on rustic wooden table", category: "still-life", model: "turbo", tags: ["coffee", "cozy", "morning"] },
+        { id: 19, text: "colorful hot air balloon festival in clear blue sky", category: "events", model: "turbo", tags: ["balloons", "sky", "colorful"] },
+        { id: 20, text: "vintage typewriter on desk with old paper", category: "still-life", model: "turbo", tags: ["vintage", "writing", "nostalgia"] }
+      ],
+
+      negativePrompts: [
+        { id: 1, text: "blurry, low quality, distorted, deformed, ugly, bad anatomy", category: "universal", name: "Universal Quality Filter" },
+        { id: 2, text: "cartoon, anime, illustration, painting, drawing, 3d render", category: "photorealistic", name: "Anti-Artistic (Photo Only)" },
+        { id: 3, text: "photo, photograph, realistic, hyperrealistic", category: "artistic", name: "Anti-Photo (Art Only)" },
+        { id: 4, text: "nsfw, nude, sexual, explicit, gore, violence, blood", category: "safety", name: "Content Safety Filter" },
+        { id: 5, text: "text, watermark, signature, logo, username, caption, title", category: "clean", name: "No Text/Watermarks" },
+        { id: 6, text: "multiple people, crowd, group, extra limbs, duplicate", category: "single-subject", name: "Single Subject Focus" },
+        { id: 7, text: "dark, shadows, night, low light, underexposed", category: "lighting", name: "Bright Lighting Only" },
+        { id: 8, text: "bright, overexposed, washed out, high contrast", category: "lighting", name: "Moody/Dark Lighting" },
+        { id: 9, text: "modern, contemporary, futuristic, scifi, technology", category: "historical", name: "Historical/Traditional Only" },
+        { id: 10, text: "old, vintage, antique, rustic, medieval, historical", category: "modern", name: "Modern/Contemporary Only" },
+        { id: 11, text: "color, colorful, vibrant, saturated, bright colors", category: "monochrome", name: "Black & White Only" },
+        { id: 12, text: "black and white, monochrome, grayscale, desaturated", category: "color", name: "Colorful Only" },
+        { id: 13, text: "simple, minimalist, plain, empty, sparse, basic", category: "detailed", name: "Maximum Detail" },
+        { id: 14, text: "busy, cluttered, complex, detailed, ornate, intricate", category: "simple", name: "Clean & Simple" },
+        { id: 15, text: "ugly, hideous, grotesque, disgusting, repulsive", category: "beauty", name: "Beauty Enhancement" }
+      ],
+
+      stylePresets: [
+        {
+          name: "Default",
+          prompt: "",
+          negative: "",
+          icon: "circle"
+        },
+        {
+          name: "Photorealistic",
+          prompt: "highly detailed, 8k resolution, photorealistic, cinematic lighting, professional photography, sharp focus, depth of field, masterpiece quality",
+          negative: "cartoon, painting, illustration, anime, cgi, 3d render, plastic skin, doll-like, artificial, stylized",
+          icon: "camera"
+        },
+        {
+          name: "Digital Art",
+          prompt: "vibrant digital art, sharp edges, clean lines, artstation trending, concept art, professional illustration, bold colors, digital painting",
+          negative: "photo, photograph, realistic, blurry edges, sketchy, rough, unfinished",
+          icon: "palette"
+        },
+        {
+          name: "Oil Painting",
+          prompt: "classic oil painting, visible brushstrokes, rich textures, canvas detail, impasto technique, renaissance style, museum quality, fine art",
+          negative: "digital, smooth, photo, photograph, sharp edges, modern, flat colors",
+          icon: "brush"
+        },
+        {
+          name: "Cyberpunk",
+          prompt: "cyberpunk aesthetic, neon lighting, futuristic cityscape, dark urban atmosphere, rain-soaked streets, holographic displays, dystopian, tech noir",
+          negative: "bright daylight, nature, medieval, historical, pastel colors, soft lighting, rural, natural",
+          icon: "cpu"
+        },
+        {
+          name: "Anime",
+          prompt: "anime style, cel shaded, expressive features, high quality illustration, vibrant colors, clean lineart, manga inspired, studio quality",
+          negative: "realistic, photo, 3d, western cartoon, rough sketch, messy lineart, poorly drawn",
+          icon: "star"
+        },
+        {
+          name: "Vaporwave",
+          prompt: "vaporwave aesthetic, pink and teal color scheme, 80s retro, glitch art, nostalgic, geometric shapes, marble textures, japanese text",
+          negative: "realistic, modern, clean, minimalist, monochrome, natural colors, contemporary",
+          icon: "waves"
+        },
+        {
+          name: "Pencil Sketch",
+          prompt: "pencil sketch, hand-drawn, graphite texture, cross-hatching, shading, sketch lines visible, artistic drawing, traditional art",
+          negative: "colored, painted, digital, photo, smooth, polished, finished, clean",
+          icon: "pencil"
+        },
+        {
+          name: "3D Render",
+          prompt: "octane render, unreal engine 5, 3d model, volumetric lighting, ray tracing, high fidelity, physically based rendering, CGI masterpiece",
+          negative: "flat, 2d, hand-drawn, painted, sketch, low poly, pixelated, rough",
+          icon: "box"
+        },
+        {
+          name: "Watercolor",
+          prompt: "watercolor painting, soft bleeds, paper texture, artistic drips, translucent layers, delicate washes, traditional watercolor technique",
+          negative: "digital, sharp, photo, oil painting, acrylic, crisp edges, solid colors",
+          icon: "droplet"
+        },
+        {
+          name: "Horror",
+          prompt: "dark horror atmosphere, eerie lighting, ominous shadows, creepy details, unsettling mood, gothic aesthetic, macabre, sinister",
+          negative: "bright, cheerful, colorful, cute, friendly, warm lighting, safe, inviting",
+          icon: "skull"
+        },
+        {
+          name: "Fantasy Epic",
+          prompt: "epic fantasy, magical atmosphere, mystical lighting, grand scale, heroic composition, legendary, enchanted, otherworldly beauty",
+          negative: "modern, realistic, mundane, ordinary, technological, contemporary, simple",
+          icon: "wand-2"
+        },
+        {
+          name: "Minimalist",
+          prompt: "minimalist design, clean composition, simple shapes, negative space, modern aesthetic, elegant simplicity, uncluttered",
+          negative: "busy, cluttered, complex, detailed, ornate, intricate, baroque, maximalist",
+          icon: "minus"
+        },
+        {
+          name: "Steampunk",
+          prompt: "steampunk aesthetic, brass and copper, Victorian era, mechanical gears, steam-powered, industrial revolution, intricate machinery, retro-futuristic",
+          negative: "modern, digital, clean, minimalist, contemporary, sleek, futuristic technology",
+          icon: "cog"
+        },
+        {
+          name: "Comic Book",
+          prompt: "comic book style, bold outlines, halftone dots, dynamic action, speech bubbles aesthetic, vibrant colors, superhero art, graphic novel quality",
+          negative: "realistic, photo, painterly, soft, blurry, subtle, muted colors",
+          icon: "book-open"
+        },
+        {
+          name: "Horror Coloring",
+          prompt: "coloring book style, black and white line art, horror themes, spooky elements, Halloween motifs, intricate patterns, outlined shapes, pumpkins, ghosts, skeletons, haunted houses, bats, witches, spider webs, creepy trees, gravestones",
+          negative: "colored, painted, photorealistic, soft, blurry, simple, minimal lines, cute, friendly",
+          icon: "book-marked"
+        }
+      ]
+    };
+
+    // State Management
+    let currentStyle = PROMPT_LIBRARY.stylePresets[0];
+    let images = [];
+    let customPrompts = [];
+    let customNegatives = [];
+    let customStylePresets = [];
+    let currentModalType = 'prompts';
+
+    // DOM Elements
+    const els = {
+      model: document.getElementById('modelSelect'),
+      width: document.getElementById('widthInput'),
+      height: document.getElementById('heightInput'),
+      negPrompt: document.getElementById('negativePrompt'),
+      seed: document.getElementById('seedInput'),
+      count: document.getElementById('countInput'),
+      safe: document.getElementById('safeToggle'),
+      nologo: document.getElementById('nologoToggle'),
+      apiKey: document.getElementById('apiKeyInput'),
+      mainPrompt: document.getElementById('mainPrompt'),
+      imgToImg: document.getElementById('imgToImgUrl'),
+      generateBtn: document.getElementById('generateBtn'),
+      imageGrid: document.getElementById('imageGrid'),
+      emptyState: document.getElementById('emptyState'),
+      galleryCount: document.getElementById('galleryCount'),
+      clearBtn: document.getElementById('clearGallery'),
+      styleContainer: document.getElementById('styleContainer'),
+      btnIcon: document.getElementById('btnIcon'),
+      btnText: document.getElementById('btnText'),
+
+      promptLibraryModal: document.getElementById('promptLibraryModal'),
+      closePromptModal: document.getElementById('closePromptModal'),
+      promptSearch: document.getElementById('promptSearch'),
+      promptCategoryFilter: document.getElementById('promptCategoryFilter'),
+      promptModelFilter: document.getElementById('promptModelFilter'),
+      promptTypeToggle: document.getElementById('promptTypeToggle'),
+      promptGrid: document.getElementById('promptGrid'),
+
+      stylePresetModal: document.getElementById('stylePresetModal'),
+      closeStyleModal: document.getElementById('closeStyleModal'),
+      styleModalTitle: document.getElementById('styleModalTitle'),
+      stylePresetName: document.getElementById('stylePresetName'),
+      stylePresetIcon: document.getElementById('stylePresetIcon'),
+      stylePresetPrompt: document.getElementById('stylePresetPrompt'),
+      stylePresetNegative: document.getElementById('stylePresetNegative'),
+      saveStylePreset: document.getElementById('saveStylePreset'),
+      cancelStylePreset: document.getElementById('cancelStylePreset'),
+
+      openPromptLibrary: document.getElementById('openPromptLibrary'),
+      addCurrentPrompt: document.getElementById('addCurrentPrompt'),
+      openNegativeLibrary: document.getElementById('openNegativeLibrary'),
+      addCurrentNegative: document.getElementById('addCurrentNegative'),
+      addStylePreset: document.getElementById('addStylePreset'),
+
+      toggleNegPreview: document.getElementById('toggleNegPreview'),
+      negPreviewContent: document.getElementById('negPreviewContent'),
+      universalNegDisplay: document.getElementById('universalNegDisplay'),
+      styleNegDisplay: document.getElementById('styleNegDisplay'),
+      customNegDisplay: document.getElementById('customNegDisplay'),
+      styleNegContainer: document.getElementById('styleNegContainer'),
+      customNegContainer: document.getElementById('customNegContainer')
+    };
+
+    // Initialize Settings
+    function initSettings() {
+      const saved = localStorage.getItem('pollinations_settings');
+      if (saved) {
+        const s = JSON.parse(saved);
+        els.model.value = s.model || 'flux';
+        els.width.value = s.width || 1024;
+        els.height.value = s.height || 1024;
+        els.negPrompt.value = s.negative_prompt || '';
+        els.safe.checked = s.safe !== undefined ? s.safe : true;
+        els.nologo.checked = s.nologo !== undefined ? s.nologo : true;
+        els.apiKey.value = s.apiKey || '';
+        updateToggleUI();
+      }
+
+      customPrompts = JSON.parse(localStorage.getItem('custom_prompts') || '[]');
+      customNegatives = JSON.parse(localStorage.getItem('custom_negatives') || '[]');
+      customStylePresets = JSON.parse(localStorage.getItem('custom_style_presets') || '[]');
+    }
+
+    function saveSettings() {
+      const s = {
+        model: els.model.value,
+        width: els.width.value,
+        height: els.height.value,
+        negative_prompt: els.negPrompt.value,
+        safe: els.safe.checked,
+        nologo: els.nologo.checked,
+        apiKey: els.apiKey.value
+      };
+      localStorage.setItem('pollinations_settings', JSON.stringify(s));
+    }
+
+    function saveCustomLibrary() {
+      localStorage.setItem('custom_prompts', JSON.stringify(customPrompts));
+      localStorage.setItem('custom_negatives', JSON.stringify(customNegatives));
+      localStorage.setItem('custom_style_presets', JSON.stringify(customStylePresets));
+    }
+
+    function updateToggleUI() {
+      document.getElementById('safeIndicator').style.left = els.safe.checked ? '1.5rem' : '0.25rem';
+      document.getElementById('nologoIndicator').style.left = els.nologo.checked ? '1.5rem' : '0.25rem';
+      els.safe.parentElement.querySelector('div').classList.toggle('bg-blue-600', els.safe.checked);
+      els.safe.parentElement.querySelector('div').classList.toggle('bg-slate-700', !els.safe.checked);
+      els.nologo.parentElement.querySelector('div').classList.toggle('bg-blue-600', els.nologo.checked);
+      els.nologo.parentElement.querySelector('div').classList.toggle('bg-slate-700', !els.nologo.checked);
+    }
+
+    function buildFullNegativePrompt() {
+      const parts = [];
+
+      // Collect all negative terms
+      const allTerms = [];
+
+      // Add universal negative
+      if (PROMPT_LIBRARY.universalNegative) {
+        allTerms.push(...PROMPT_LIBRARY.universalNegative.split(',').map(t => t.trim()));
+      }
+
+      // Add style-specific negative
+      if (currentStyle.negative) {
+        allTerms.push(...currentStyle.negative.split(',').map(t => t.trim()));
+      }
+
+      // Add custom negative
+      if (els.negPrompt.value.trim()) {
+        allTerms.push(...els.negPrompt.value.trim().split(',').map(t => t.trim()));
+      }
+
+      // Deduplicate and filter empty strings
+      const uniqueTerms = [...new Set(allTerms)].filter(t => t.length > 0);
+
+      return uniqueTerms.join(', ');
+    }
+
+    function updateNegativePreview() {
+      els.universalNegDisplay.textContent = PROMPT_LIBRARY.universalNegative;
+
+      if (currentStyle.negative) {
+        els.styleNegDisplay.textContent = currentStyle.negative;
+        els.styleNegContainer.classList.remove('hidden');
+      } else {
+        els.styleNegContainer.classList.add('hidden');
+      }
+
+      if (els.negPrompt.value.trim()) {
+        els.customNegDisplay.textContent = els.negPrompt.value;
+        els.customNegContainer.classList.remove('hidden');
+      } else {
+        els.customNegContainer.classList.add('hidden');
+      }
+    }
+
+    function renderStyles() {
+      els.styleContainer.innerHTML = '';
+      const allPresets = [...PROMPT_LIBRARY.stylePresets, ...customStylePresets];
+
+      allPresets.forEach((s, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${currentStyle.name === s.name ? 'bg-blue-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`;
+        btn.innerHTML = `<i data-lucide="${s.icon || 'circle'}" size="14"></i> ${s.name}`;
+        btn.onclick = () => {
+          currentStyle = s;
+          renderStyles();
+          updateNegativePreview();
+        };
+
+        if (idx >= PROMPT_LIBRARY.stylePresets.length) {
+          const delBtn = document.createElement('span');
+          delBtn.innerHTML = `<i data-lucide="x" size="12"></i>`;
+          delBtn.className = 'ml-1 opacity-60 hover:opacity-100 cursor-pointer';
+          delBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm(`Delete "${s.name}" preset?`)) {
+              customStylePresets.splice(idx - PROMPT_LIBRARY.stylePresets.length, 1);
+              saveCustomLibrary();
+              if (currentStyle.name === s.name) currentStyle = PROMPT_LIBRARY.stylePresets[0];
+              renderStyles();
+            }
+          };
+          btn.appendChild(delBtn);
+        }
+
+        els.styleContainer.appendChild(btn);
+      });
+      lucide.createIcons();
+    }
+
+    function openPromptLibrary(type = 'prompts') {
+      currentModalType = type;
+      els.promptLibraryModal.classList.remove('hidden');
+      updatePromptTypeToggle();
+      renderPromptGrid();
+    }
+
+    function closePromptLibraryModal() {
+      els.promptLibraryModal.classList.add('hidden');
+    }
+
+    function updatePromptTypeToggle() {
+      els.promptTypeToggle.querySelectorAll('button').forEach(btn => {
+        const isActive = btn.dataset.type === currentModalType;
+        btn.className = `px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-1 ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`;
+      });
+    }
+
+    function renderPromptGrid() {
+      const searchTerm = els.promptSearch.value.toLowerCase();
+      const categoryFilter = els.promptCategoryFilter.value;
+      const modelFilter = els.promptModelFilter.value;
+
+      let items = currentModalType === 'prompts'
+        ? [...PROMPT_LIBRARY.prompts, ...customPrompts]
+        : [...PROMPT_LIBRARY.negativePrompts, ...customNegatives];
+
+      items = items.filter(item => {
+        const matchesSearch = item.text.toLowerCase().includes(searchTerm) ||
+          (item.name && item.name.toLowerCase().includes(searchTerm)) ||
+          (item.tags && item.tags.some(tag => tag.includes(searchTerm)));
+        const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
+        const matchesModel = modelFilter === 'all' || !item.model || item.model === modelFilter;
+
+        return matchesSearch && matchesCategory && matchesModel;
+      });
+
+      els.promptGrid.innerHTML = '';
+
+      if (items.length === 0) {
+        els.promptGrid.innerHTML = `
+          <div class="text-center py-12 text-slate-500">
+            <i data-lucide="search-x" size="48" class="mx-auto mb-4 opacity-20"></i>
+            <p>No prompts found matching your filters</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      items.forEach((item, idx) => {
+        const card = document.createElement('div');
+        const isCustom = idx >= (currentModalType === 'prompts' ? PROMPT_LIBRARY.prompts.length : PROMPT_LIBRARY.negativePrompts.length);
+
+        card.className = 'bg-slate-950 border border-slate-800 rounded-xl p-4 hover:border-blue-600 transition-colors cursor-pointer group';
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <div class="flex-1">
+              ${item.name ? `<h4 class="font-bold text-sm text-slate-200 mb-1">${item.name}</h4>` : ''}
+              <p class="text-sm text-slate-400 line-clamp-3">${item.text}</p>
+            </div>
+            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button class="use-prompt p-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg" title="Use This">
+                <i data-lucide="arrow-left" size="14"></i>
+              </button>
+              ${isCustom ? `<button class="delete-prompt p-1.5 bg-red-600 hover:bg-red-500 rounded-lg" title="Delete">
+                <i data-lucide="trash-2" size="14"></i>
+              </button>` : ''}
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            ${item.category ? `<span class="text-xs px-2 py-0.5 bg-slate-800 rounded text-slate-400">${item.category}</span>` : ''}
+            ${item.model ? `<span class="text-xs px-2 py-0.5 bg-blue-900/30 rounded text-blue-400">${item.model}</span>` : ''}
+            ${item.tags ? item.tags.map(tag => `<span class="text-xs px-2 py-0.5 bg-slate-800/50 rounded text-slate-500">${tag}</span>`).join('') : ''}
+          </div>
+        `;
+
+        card.querySelector('.use-prompt').onclick = (e) => {
+          e.stopPropagation();
+          if (currentModalType === 'prompts') {
+            els.mainPrompt.value = item.text;
+          } else {
+            els.negPrompt.value = item.text;
+            updateNegativePreview();
+          }
+          closePromptLibraryModal();
+        };
+
+        if (isCustom) {
+          card.querySelector('.delete-prompt').onclick = (e) => {
+            e.stopPropagation();
+            if (confirm('Delete this prompt?')) {
+              const customIdx = idx - (currentModalType === 'prompts' ? PROMPT_LIBRARY.prompts.length : PROMPT_LIBRARY.negativePrompts.length);
+              if (currentModalType === 'prompts') {
+                customPrompts.splice(customIdx, 1);
+              } else {
+                customNegatives.splice(customIdx, 1);
+              }
+              saveCustomLibrary();
+              renderPromptGrid();
+            }
+          };
+        }
+
+        els.promptGrid.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function addCurrentPromptToLibrary() {
+      const text = els.mainPrompt.value.trim();
+      if (!text) {
+        return;
+      }
+
+      const name = prompt('Give this prompt a name (optional):');
+      const category = prompt('Category (e.g., fantasy, nature, character):') || 'custom';
+      const tags = prompt('Tags (comma-separated, optional):');
+
+      const newPrompt = {
+        id: Date.now(),
+        text: text,
+        name: name || undefined,
+        category: category,
+        tags: tags ? tags.split(',').map(t => t.trim()) : [],
+        model: els.model.value
+      };
+
+      customPrompts.push(newPrompt);
+      saveCustomLibrary();
+      alert('Prompt saved to library!');
+    }
+
+    function addCurrentNegativeToLibrary() {
+      const text = els.negPrompt.value.trim();
+      if (!text) {
+        return;
+      }
+
+      const name = prompt('Give this negative prompt a name:');
+      if (!name) return;
+
+      const category = prompt('Category (e.g., universal, photorealistic, artistic):') || 'custom';
+
+      const newNegative = {
+        id: Date.now(),
+        text: text,
+        name: name,
+        category: category
+      };
+
+      customNegatives.push(newNegative);
+      saveCustomLibrary();
+      alert('Negative prompt saved to library!');
+    }
+
+    function openStylePresetModal() {
+      els.stylePresetModal.classList.remove('hidden');
+      els.styleModalTitle.textContent = 'Add Style Preset';
+      els.stylePresetName.value = '';
+      els.stylePresetIcon.value = '';
+      els.stylePresetPrompt.value = '';
+      els.stylePresetNegative.value = '';
+    }
+
+    function closeStylePresetModal() {
+      els.stylePresetModal.classList.add('hidden');
+    }
+
+    function saveNewStylePreset() {
+      const name = els.stylePresetName.value.trim();
+      const icon = els.stylePresetIcon.value.trim() || 'circle';
+      const prompt = els.stylePresetPrompt.value.trim();
+      const negative = els.stylePresetNegative.value.trim();
+
+      if (!name) {
+        alert('Please enter a preset name');
+        return;
+      }
+
+      const newPreset = {
+        name: name,
+        prompt: prompt,
+        negative: negative,
+        icon: icon
+      };
+
+      customStylePresets.push(newPreset);
+      saveCustomLibrary();
+      renderStyles();
+      closeStylePresetModal();
+      alert(`Style preset "${name}" created!`);
+    }
+
+    async function generate() {
+      const promptValue = els.mainPrompt.value.trim();
+      if (!promptValue) return;
+
+      setLoading(true);
+      const count = parseInt(els.count.value) || 1;
+      const seedVal = els.seed.value.trim();
+
+      for (let i = 0; i < count; i++) {
+        const currentSeed = seedVal === "-1" ? Math.floor(Math.random() * 2147483647) : parseInt(seedVal) + i;
+
+        let fullPrompt = promptValue;
+        if (currentStyle.prompt) fullPrompt += `, ${currentStyle.prompt}`;
+
+        const fullNegative = buildFullNegativePrompt();
+
+        const encodedPrompt = encodeURIComponent(fullPrompt);
+
+        // Build URL - API requires authentication via key parameter
+        let url = `https://gen.pollinations.ai/image/${encodedPrompt}?width=${els.width.value}&height=${els.height.value}&seed=${currentSeed}&model=${els.model.value}`;
+
+        // Add API key if provided, otherwise use default
+        const apiKey = els.apiKey.value.trim() || 'sk_OSQh5VuelS0ij8rV0dmnQx5YIttIZZtb';
+        url += `&key=${apiKey}`;
+
+        // Add nologo parameter
+        if (els.nologo.checked) {
+          url += `&nologo=true`;
+        }
+
+        // Add safe mode
+        if (els.safe.checked) {
+          url += `&safe=true`;
+        }
+
+        // Add negative prompt if exists (without duplicates)
+        if (fullNegative && fullNegative.trim().length > 0) {
+          url += `&negative_prompt=${encodeURIComponent(fullNegative)}`;
+        }
+
+        // Add reference image if provided
+        if (els.imgToImg.value.trim()) {
+          url += `&image=${encodeURIComponent(els.imgToImg.value.trim())}`;
+        }
+
+        console.log('=== IMAGE GENERATION DEBUG ===');
+        console.log('Full prompt:', fullPrompt);
+        console.log('Negative (deduplicated):', fullNegative);
+        console.log('Model:', els.model.value);
+        console.log('Dimensions:', `${els.width.value}x${els.height.value}`);
+        console.log('Seed:', currentSeed);
+        console.log('Using API Key:', apiKey.substring(0, 8) + '...');
+        console.log('Final URL:', url);
+
+        addImageToGallery(url, currentSeed, fullPrompt);
+      }
+
+      setLoading(false);
+      saveSettings();
+    }
+
+    function addImageToGallery(url, seed, prompt) {
+      els.emptyState.classList.add('hidden');
+
+      const wrapper = document.createElement('div');
+      wrapper.className = "group relative bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-lg";
+
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = "Generated";
+      img.className = "w-full aspect-square object-cover bg-slate-800";
+      img.loading = "lazy";
+      img.onerror = () => {
+        wrapper.innerHTML = `
+          <div class="w-full aspect-square bg-red-900 flex items-center justify-center text-red-200 p-4">
+            <div class="text-center">
+              <i data-lucide="alert-triangle" size="48"></i>
+              <p class="mt-2 text-sm">Failed to generate</p>
+              <p class="mt-1 text-xs text-red-300">Check console for details</p>
+            </div>
+          </div>
+        `;
+        console.error('Image generation failed:', url);
+        lucide.createIcons();
+      };
+
+      const overlay = document.createElement('div');
+      overlay.className = "absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3";
+      overlay.innerHTML = `
+        <p class="text-xs text-slate-300">Seed: ${seed}</p>
+        <a href="${url}" target="_blank" class="p-2 bg-blue-600 rounded-lg hover:bg-blue-500">
+          <i data-lucide="download" size="20"></i>
+        </a>
+      `;
+
+      wrapper.appendChild(img);
+      wrapper.appendChild(overlay);
+
+      els.imageGrid.prepend(wrapper);
+      images.push({ url, seed });
+      els.galleryCount.textContent = images.length;
+      lucide.createIcons();
+    }
+
+    function setLoading(isLoading) {
+      els.generateBtn.disabled = isLoading;
+      if (isLoading) {
+        els.btnText.textContent = "Envisioning...";
+        els.btnIcon.setAttribute('data-lucide', 'refresh-cw');
+        els.btnIcon.classList.add('animate-spin');
+      } else {
+        els.btnText.textContent = "Generate Masterpiece";
+        els.btnIcon.setAttribute('data-lucide', 'sparkles');
+        els.btnIcon.classList.remove('animate-spin');
+      }
+      lucide.createIcons();
+    }
+
+    // Event Listeners
+    els.generateBtn.onclick = generate;
+    els.clearBtn.onclick = () => {
+      els.imageGrid.innerHTML = '';
+      els.imageGrid.appendChild(els.emptyState);
+      els.emptyState.classList.remove('hidden');
+      images = [];
+      els.galleryCount.textContent = '0';
+    };
+
+    els.openPromptLibrary.onclick = () => openPromptLibrary('prompts');
+    els.openNegativeLibrary.onclick = () => openPromptLibrary('negative');
+    els.addCurrentPrompt.onclick = addCurrentPromptToLibrary;
+    els.addCurrentNegative.onclick = addCurrentNegativeToLibrary;
+    els.closePromptModal.onclick = closePromptLibraryModal;
+
+    els.promptSearch.oninput = renderPromptGrid;
+    els.promptCategoryFilter.onchange = renderPromptGrid;
+    els.promptModelFilter.onchange = renderPromptGrid;
+
+    els.promptTypeToggle.querySelectorAll('button').forEach(btn => {
+      btn.onclick = () => {
+        currentModalType = btn.dataset.type;
+        updatePromptTypeToggle();
+        renderPromptGrid();
+      };
+    });
+
+    els.addStylePreset.onclick = openStylePresetModal;
+    els.closeStyleModal.onclick = closeStylePresetModal;
+    els.cancelStylePreset.onclick = closeStylePresetModal;
+    els.saveStylePreset.onclick = saveNewStylePreset;
+
+    els.toggleNegPreview.onclick = () => {
+      els.negPreviewContent.classList.toggle('hidden');
+      const icon = els.toggleNegPreview.querySelector('i');
+      const isVisible = !els.negPreviewContent.classList.contains('hidden');
+      icon.setAttribute('data-lucide', isVisible ? 'eye-off' : 'eye');
+      els.toggleNegPreview.querySelector('span').textContent = isVisible ? 'Hide Active Filters' : 'Show Active Filters';
+      lucide.createIcons();
+      if (isVisible) updateNegativePreview();
+    };
+
+    els.promptLibraryModal.onclick = (e) => {
+      if (e.target === els.promptLibraryModal) closePromptLibraryModal();
+    };
+    els.stylePresetModal.onclick = (e) => {
+      if (e.target === els.stylePresetModal) closeStylePresetModal();
+    };
+
+    [els.model, els.width, els.height, els.negPrompt, els.safe, els.nologo, els.apiKey].forEach(el => {
+      el.onchange = () => {
+        saveSettings();
+        updateToggleUI();
+      };
+    });
+
+    els.negPrompt.oninput = updateNegativePreview;
+
+    // Initialize
+    window.onload = () => {
+      lucide.createIcons();
+      initSettings();
+      renderStyles();
+      updateNegativePreview();
+    };
+  </script>
+</body>
+
+</html>
