@@ -97,9 +97,10 @@ Principal Enterprise Architect & Senior Software Engineer with **25+ years** of 
 
 ---
 ### **Community Cybersecurity Involvement**
-- **Cybersecurity Advocate**: Actively involved in promoting secure coding practices and cybersecurity awareness within the local tech community.
-- **Workshops and Training**: Conducted workshops on secure development practices, data protection, and vulnerability assessments.
-- **Collaboration with Local Groups**: Worked with local cybersecurity groups to organize events and share knowledge on emerging threats and mitigation strategies.
+- Cybersecurity Researcher, Advocate, & Community Developer
+- Conducted private research into red-team and blue-team cybersecurity strategies on the YMSG Protocol
+- Co-developed proprietary security tools protecting client users against YMSG protocol-based network exploits
+- Designed client software defenses, including secure APIs, and workflows for enterprise data protection on customer software based on my community cyber-security work
 
 ---
 ### **Education & Certifications**
